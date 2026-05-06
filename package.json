@@ -1,0 +1,33 @@
+{
+  "name": "sentinelqa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=25.0.0 <26"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,api,scheduler,worker,runner -c cyan,green,yellow,magenta,blue \"pnpm --filter @sentinelqa/web dev\" \"pnpm --filter @sentinelqa/api dev\" \"pnpm --filter @sentinelqa/scheduler dev\" \"pnpm --filter @sentinelqa/worker dev\" \"pnpm --filter @sentinelqa/runner dev\"",
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @sentinelqa/db db:migrate",
+    "db:seed": "pnpm --filter @sentinelqa/db db:seed",
+    "db:generate": "pnpm --filter @sentinelqa/db db:generate"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "@hono/node-server": "^1.19.13",
+      "postcss": "^8.5.14"
+    }
+  }
+}

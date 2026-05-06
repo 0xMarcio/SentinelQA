@@ -1,0 +1,58 @@
+body {
+  margin: 0;
+  width: 380px;
+  background: #f4f6f1;
+  color: #17201d;
+  font-family: Aptos, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+.popup {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+header,
+.row,
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #66716c;
+}
+
+input,
+select,
+button {
+  border: 1px solid #d8dfdb;
+  border-radius: 7px;
+  min-height: 32px;
+  padding: 7px 8px;
+  background: white;
+  color: #17201d;
+}
+
+button {
+  cursor: pointer;
+  background: #17201d;
+  color: white;
+  border-color: #17201d;
+}
+
+.row > label {
+  flex: 1;
+}
+
+footer {
+  color: #66716c;
+  font-size: 12px;
+}
+

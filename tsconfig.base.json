@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "@sentinelqa/dsl": ["./packages/dsl/src/index.ts"],
+      "@sentinelqa/db": ["./packages/db/src/index.ts"],
+      "@sentinelqa/storage": ["./packages/storage/src/index.ts"],
+      "@sentinelqa/integrations": ["./packages/integrations/src/index.ts"],
+      "@sentinelqa/ui": ["./packages/ui/src/index.ts"]
+    }
+  }
+}

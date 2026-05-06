@@ -1,0 +1,414 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberRole {
+  owner
+  admin
+  editor
+  viewer
+}
+
+enum RunStatus {
+  queued
+  running
+  passed
+  failed
+  cancelled
+}
+
+enum StepResultStatus {
+  passed
+  failed
+  skipped
+}
+
+enum ArtifactKind {
+  screenshot
+  finalScreenshot
+  video
+  trace
+  console
+  visualDiff
+  accessibility
+  upload
+}
+
+enum NotificationKind {
+  webhook
+  slack
+}
+
+enum WebhookDeliveryStatus {
+  queued
+  delivered
+  failed
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  memberships OrganizationMember[]
+  apiTokens   ApiToken[]
+  auditLogs   AuditLog[]
+}
+
+model Organization {
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  members               OrganizationMember[]
+  projects              Project[]
+  notificationEndpoints NotificationEndpoint[]
+  apiTokens             ApiToken[]
+  auditLogs             AuditLog[]
+  runs                  Run[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MemberRole   @default(owner)
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  environments   Environment[]
+  folders        Folder[]
+  suites         Suite[]
+  tests          Test[]
+  dataSources    DataSource[]
+  runs           Run[]
+
+  @@unique([organizationId, slug])
+}
+
+model Environment {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  slug      String
+  baseUrl   String?
+  variables Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  runs      Run[]
+
+  @@unique([projectId, slug])
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  projectId String
+  parentId  String?
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Folder[] @relation("FolderTree")
+  suites    Suite[]
+  tests     Test[]
+}
+
+model Suite {
+  id          String   @id @default(cuid())
+  projectId   String
+  folderId    String?
+  name        String
+  description String?
+  variables   Json     @default("{}")
+  secretVariables Json  @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tests       Test[]
+  schedules   Schedule[]
+  dataSources DataSource[]
+  suiteRuns   SuiteRun[]
+  runs        Run[]
+}
+
+model Test {
+  id              String   @id @default(cuid())
+  projectId       String
+  suiteId         String
+  folderId        String?
+  name            String
+  description     String?
+  startUrl        String
+  defaults        Json     @default("{}")
+  visualEnabled   Boolean  @default(false)
+  visualThreshold Float    @default(0.2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite           Suite    @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  folder          Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions        TestVersion[]
+  schedules       Schedule[]
+  runs            Run[]
+  baselines       VisualBaseline[]
+}
+
+model TestVersion {
+  id        String   @id @default(cuid())
+  testId    String
+  version   Int
+  dsl       Json
+  createdAt DateTime @default(now())
+  test      Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  steps     Step[]
+  runs      Run[]
+
+  @@unique([testId, version])
+}
+
+model Step {
+  id            String      @id @default(cuid())
+  testVersionId String
+  command       String
+  target        String?
+  value         String?
+  variableName  String?
+  optional      Boolean     @default(false)
+  privateValue  Boolean     @default(false)
+  notes         String?
+  timeoutMs     Int?
+  backupSelectors Json      @default("[]")
+  conditionJs   String?
+  sequence      Int
+  testVersion   TestVersion @relation(fields: [testVersionId], references: [id], onDelete: Cascade)
+}
+
+model VariableSet {
+  id        String   @id @default(cuid())
+  suiteId   String?
+  testId    String?
+  name      String
+  variables Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DataSource {
+  id        String   @id @default(cuid())
+  projectId String
+  suiteId   String?
+  name      String
+  rows      Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite     Suite?   @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+}
+
+model Schedule {
+  id         String   @id @default(cuid())
+  suiteId    String?
+  testId     String?
+  name       String
+  active     Boolean  @default(true)
+  intervalMinutes Int?
+  cron       String?
+  timezone   String?
+  nextRunAt  DateTime?
+  lastRunAt  DateTime?
+  variables  Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  suite      Suite?   @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  test       Test?    @relation(fields: [testId], references: [id], onDelete: Cascade)
+}
+
+model Run {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  suiteId        String?
+  suiteRunId     String?
+  testId         String
+  testVersionId  String
+  environmentId  String?
+  status         RunStatus @default(queued)
+  visualStatus   String?
+  startUrl       String
+  endUrl         String?
+  variables      Json      @default("{}")
+  browser        String    @default("chromium")
+  viewport       Json      @default("{\"width\":1920,\"height\":1080}")
+  locale         String?
+  timezone       String?
+  geolocation    Json?
+  traceEnabled   Boolean   @default(true)
+  videoEnabled   Boolean   @default(true)
+  visualEnabled  Boolean   @default(false)
+  queuedAt       DateTime  @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  durationMs     Int?
+  error          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite          Suite?    @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  suiteRun       SuiteRun? @relation(fields: [suiteRunId], references: [id], onDelete: SetNull)
+  test           Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testVersion    TestVersion @relation(fields: [testVersionId], references: [id], onDelete: Restrict)
+  environment    Environment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  stepResults    RunStepResult[]
+  artifacts      Artifact[]
+  comments       RunComment[]
+  webhookDeliveries WebhookDelivery[]
+}
+
+model SuiteRun {
+  id        String    @id @default(cuid())
+  suiteId   String
+  status    RunStatus @default(queued)
+  queuedAt  DateTime  @default(now())
+  startedAt DateTime?
+  finishedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  suite     Suite     @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  runs      Run[]
+}
+
+model RunStepResult {
+  id             String           @id @default(cuid())
+  runId          String
+  stepId         String
+  sequence       Int
+  command        String
+  status         StepResultStatus
+  startedAt      DateTime
+  finishedAt     DateTime
+  durationMs     Int
+  error          String?
+  resolvedTarget String?
+  url            String?
+  screenshotArtifactId String?
+  metadata       Json             @default("{}")
+  run            Run              @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model Artifact {
+  id        String       @id @default(cuid())
+  runId     String
+  kind      ArtifactKind
+  key       String
+  url       String?
+  contentType String?
+  sizeBytes Int?
+  metadata  Json        @default("{}")
+  createdAt DateTime    @default(now())
+  run       Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  baselines VisualBaseline[]
+}
+
+model VisualBaseline {
+  id             String   @id @default(cuid())
+  testId         String
+  browser        String
+  viewport       Json
+  viewportKey    String   @default("1920x1080")
+  environmentKey String
+  regionKey      String   @default("full-page")
+  artifactId     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  test           Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  artifact       Artifact @relation(fields: [artifactId], references: [id], onDelete: Restrict)
+
+  @@unique([testId, browser, viewportKey, environmentKey, regionKey])
+}
+
+model NotificationEndpoint {
+  id             String           @id @default(cuid())
+  organizationId String
+  kind           NotificationKind @default(webhook)
+  name           String
+  url            String
+  secret         String?
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries     WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id                     String                @id @default(cuid())
+  runId                  String
+  notificationEndpointId String
+  status                 WebhookDeliveryStatus @default(queued)
+  attempt                Int                   @default(1)
+  requestBody            Json
+  responseStatus         Int?
+  responseBody           String?
+  error                  String?
+  createdAt              DateTime              @default(now())
+  deliveredAt            DateTime?
+  run                    Run                   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  notificationEndpoint   NotificationEndpoint  @relation(fields: [notificationEndpointId], references: [id], onDelete: Cascade)
+}
+
+model ApiToken {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String?
+  name           String
+  tokenHash      String       @unique
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  targetType     String
+  targetId       String?
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model RunComment {
+  id        String   @id @default(cuid())
+  runId     String
+  body      String
+  author    String?
+  createdAt DateTime @default(now())
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+}

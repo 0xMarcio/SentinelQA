@@ -1,0 +1,1 @@
+ALTER TABLE "Suite" ADD COLUMN "secretVariables" JSONB NOT NULL DEFAULT '{}';

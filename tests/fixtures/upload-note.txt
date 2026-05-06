@@ -1,0 +1,3 @@
+SentinelQA local upload fixture.
+
+This file is used by the seeded public web form test to exercise file upload handling.

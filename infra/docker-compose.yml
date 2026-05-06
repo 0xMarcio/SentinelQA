@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:18.3-alpine3.23
+    container_name: sentinelqa-postgres
+    environment:
+      POSTGRES_USER: sentinelqa
+      POSTGRES_PASSWORD: sentinelqa
+      POSTGRES_DB: sentinelqa
+    ports:
+      - "5432:5432"
+    volumes:
+      - sentinelqa-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinelqa -d sentinelqa"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.6.3-alpine3.23
+    container_name: sentinelqa-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: sentinelqa-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sentinelqa
+      MINIO_ROOT_PASSWORD: sentinelqa-secret
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    volumes:
+      - sentinelqa-minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.29.7
+    container_name: sentinelqa-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  sentinelqa-postgres:
+  sentinelqa-minio:
