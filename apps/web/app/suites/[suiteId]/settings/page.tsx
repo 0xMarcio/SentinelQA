@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Save, Trash2 } from "lucide-react";
 import { KeyValueEditor, recordToRows, rowsToRecord, type KeyValueRow } from "../../../../components/KeyValueEditor";
+import { Loader } from "../../../../components/Loader";
 import { NavShell } from "../../../../components/NavShell";
 import { api } from "../../../../lib/api";
 
@@ -83,9 +84,10 @@ export default function SuiteSettingsPage() {
     router.push(`/projects/${suite.project.id}`);
   }
 
-  if (!suite) return <div className="workspace">Loading</div>;
-
   return (
+    <>
+      <Loader done={!!suite} />
+      {suite ? (
     <NavShell projectId={suite.project.id} suiteId={suite.id} orgId={suite.project.organizationId}>
       <div className="topbar">
         <div>
@@ -136,5 +138,7 @@ export default function SuiteSettingsPage() {
         </section>
       </div>
     </NavShell>
+      ) : null}
+    </>
   );
 }

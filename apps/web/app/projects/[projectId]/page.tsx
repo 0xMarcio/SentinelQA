@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Play, Plus, Settings } from "lucide-react";
+import { Loader } from "../../../components/Loader";
 import { NavShell } from "../../../components/NavShell";
 import { Status } from "../../../components/Status";
 import { api } from "../../../lib/api";
@@ -68,9 +69,10 @@ export default function ProjectPage() {
     await load();
   }
 
-  if (!project) return <div className="workspace">Loading</div>;
-
   return (
+    <>
+      <Loader done={!!project} />
+      {project ? (
     <NavShell projectId={project.id} orgId={project.organizationId}>
       <div className="topbar">
         <div>
@@ -133,5 +135,7 @@ export default function ProjectPage() {
         </table>
       </div>
     </NavShell>
+      ) : null}
+    </>
   );
 }

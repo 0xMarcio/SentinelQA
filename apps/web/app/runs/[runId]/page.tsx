@@ -18,6 +18,7 @@ import {
   Type,
   X
 } from "lucide-react";
+import { Loader } from "../../../components/Loader";
 import { NavShell } from "../../../components/NavShell";
 import { Status } from "../../../components/Status";
 import { api, formatDateTime, formatDuration } from "../../../lib/api";
@@ -183,9 +184,10 @@ export default function RunPage() {
   const showVisualCard = Boolean(run?.visualEnabled && finalScreenshot?.url);
   const visualStatusText = run ? visualCardStatusText(run, visualStats) : null;
 
-  if (!run) return <div className="workspace">Loading</div>;
-
   return (
+    <>
+      <Loader done={!!run} />
+      {run ? (
     <NavShell projectId={run.projectId} suiteId={run.suiteId ?? undefined}>
       <div className="result-page">
         <div className="result-breadcrumb">
@@ -319,6 +321,8 @@ export default function RunPage() {
         </div>
       </div>
     </NavShell>
+      ) : null}
+    </>
   );
 }
 

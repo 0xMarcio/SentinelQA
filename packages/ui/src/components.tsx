@@ -1,7 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export function StatusBadge({ status }: { status: string }) {
-  return <span className={`sq-badge sq-badge-${status}`}>{status.replaceAll("_", " ")}</span>;
+  const value = (status ?? "unknown").toString();
+  const slug = value.toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  const label = value.replaceAll("_", " ");
+  return <span className={`sq-badge sq-badge-${slug}`}>{label}</span>;
 }
 
 export function Button({ children, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -30,4 +33,3 @@ export function StatTile({ label, value }: { label: string; value: ReactNode }) 
     </div>
   );
 }
-

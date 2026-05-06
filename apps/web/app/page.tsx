@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderPlus } from "lucide-react";
+import { Loader } from "../components/Loader";
 import { NavShell } from "../components/NavShell";
 import { api } from "../lib/api";
 
@@ -30,9 +31,11 @@ export default function HomePage() {
     router.push(`/projects/${project.id}`);
   }
 
-  if (!me) return <div className="workspace">Loading</div>;
-  const org = me.organizations[0];
+  const org = me?.organizations[0];
   return (
+    <>
+      <Loader done={!!me} />
+      {me ? (
     <NavShell orgId={org?.id}>
       <div className="topbar">
         <div>
@@ -73,6 +76,8 @@ export default function HomePage() {
         ) : null}
       </div>
     </NavShell>
+      ) : null}
+    </>
   );
 }
 

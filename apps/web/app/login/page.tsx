@@ -8,14 +8,18 @@ import { api } from "../../lib/api";
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function login() {
     setError(null);
+    setBusy(true);
     try {
       await api("/auth/dev-login", { method: "POST", body: "{}" });
       router.push("/");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : String(loginError));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -26,12 +30,11 @@ export default function LoginPage() {
           <div className="eyebrow">Local session</div>
           <h1>SentinelQA</h1>
         </div>
-        <button className="button" onClick={login}>
-          <LogIn size={18} /> Dev login
+        <button className="button" onClick={login} disabled={busy}>
+          <LogIn size={16} /> {busy ? "Signing in" : "Dev login"}
         </button>
-        {error ? <p style={{ color: "var(--red)" }}>{error}</p> : null}
+        {error ? <p className="form-error">{error}</p> : null}
       </div>
     </div>
   );
 }
-

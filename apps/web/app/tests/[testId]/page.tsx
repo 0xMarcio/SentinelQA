@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Edit3, Play } from "lucide-react";
+import { Loader } from "../../../components/Loader";
 import { NavShell } from "../../../components/NavShell";
 import { Status } from "../../../components/Status";
 import { api, formatDateTime, formatDuration } from "../../../lib/api";
@@ -37,9 +38,11 @@ export default function TestPage() {
     router.push(`/runs/${run.id}`);
   }
 
-  if (!test) return <div className="workspace">Loading</div>;
-  const latest = test.runs[0];
+  const latest = test?.runs[0];
   return (
+    <>
+      <Loader done={!!test} />
+      {test ? (
     <NavShell projectId={test.suite.projectId} suiteId={test.suite.id}>
       <div className="topbar">
         <div>
@@ -88,5 +91,7 @@ export default function TestPage() {
         </table>
       </div>
     </NavShell>
+      ) : null}
+    </>
   );
 }

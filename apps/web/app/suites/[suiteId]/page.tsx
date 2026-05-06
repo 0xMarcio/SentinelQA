@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CalendarDays, Database, Play, Plus, Settings } from "lucide-react";
+import { Loader } from "../../../components/Loader";
 import { NavShell } from "../../../components/NavShell";
 import { Status } from "../../../components/Status";
 import { api, formatDateTime, formatDuration } from "../../../lib/api";
@@ -54,8 +55,10 @@ export default function SuitePage() {
     await load();
   }
 
-  if (!suite) return <div className="workspace">Loading</div>;
   return (
+    <>
+      <Loader done={!!suite} />
+      {suite ? (
     <NavShell projectId={suite.project.id} suiteId={suite.id} orgId={suite.project.organizationId}>
       <div className="topbar">
         <div>
@@ -135,5 +138,7 @@ export default function SuitePage() {
         </section>
       ) : null}
     </NavShell>
+      ) : null}
+    </>
   );
 }

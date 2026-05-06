@@ -748,7 +748,6 @@ export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; tes
               </div>
             </div>
 
-            <div className="step-action-meta">{commandConfig[step.command].group}</div>
             <StepSpecificFields
               step={step}
               index={index}

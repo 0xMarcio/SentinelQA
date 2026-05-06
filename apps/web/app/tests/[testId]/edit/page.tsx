@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { TestDsl } from "@sentinelqa/dsl";
+import { Loader } from "../../../../components/Loader";
 import { NavShell } from "../../../../components/NavShell";
 import { TestEditor } from "../../../../components/TestEditor";
 import { api } from "../../../../lib/api";
@@ -22,17 +23,21 @@ export default function EditTestPage() {
     api<TestRecord>(`/tests/${testId}`).then(setTest).catch(() => router.push("/login"));
   }, [testId, router]);
 
-  if (!test) return <div className="workspace">Loading</div>;
   return (
-    <NavShell projectId={test.suite.projectId} suiteId={test.suite.id}>
-      <div className="topbar">
-        <div>
-          <div className="eyebrow">Edit</div>
-          <h1>Test editor</h1>
-        </div>
-      </div>
-      <TestEditor testId={test.id} initial={test.versions[0]?.dsl} />
-    </NavShell>
+    <>
+      <Loader done={!!test} />
+      {test ? (
+        <NavShell projectId={test.suite.projectId} suiteId={test.suite.id}>
+          <div className="topbar">
+            <div>
+              <div className="eyebrow">Edit</div>
+              <h1>Test editor</h1>
+            </div>
+          </div>
+          <TestEditor testId={test.id} initial={test.versions[0]?.dsl} />
+        </NavShell>
+      ) : null}
+    </>
   );
 }
 
