@@ -171,6 +171,7 @@ export const SuiteScalarFieldEnum = {
   description: 'description',
   variables: 'variables',
   secretVariables: 'secretVariables',
+  browserOptions: 'browserOptions',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

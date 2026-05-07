@@ -17,7 +17,15 @@ interface TestRecord {
   visualThreshold: number;
   suite: { id: string; projectId: string };
   versions: Array<{ id: string; version: number; createdAt: string; dsl: unknown }>;
-  runs: Array<{ id: string; status: string; visualStatus?: string | null; durationMs?: number | null; createdAt: string; startUrl: string }>;
+  runs: Array<{
+    id: string;
+    status: string;
+    visualEnabled: boolean;
+    visualStatus?: string | null;
+    durationMs?: number | null;
+    createdAt: string;
+    startUrl: string;
+  }>;
 }
 
 export default function TestPage() {
@@ -56,7 +64,7 @@ export default function TestPage() {
       </div>
       <div className="grid three">
         <div className="sq-stat"><span>Latest</span><strong><Status value={latest?.status} /></strong></div>
-        <div className="sq-stat"><span>Visual</span><strong><Status value={latest?.visualStatus ?? (test.visualEnabled ? "enabled" : "off")} /></strong></div>
+        <div className="sq-stat"><span>Visual</span><strong><Status value={latest ? visualStatusForRun(latest) : (test.visualEnabled ? "enabled" : "disabled")} /></strong></div>
         <div className="sq-stat"><span>Duration</span><strong>{formatDuration(latest?.durationMs)}</strong></div>
       </div>
       <div className="panel grid" style={{ marginTop: 16 }}>
@@ -82,7 +90,7 @@ export default function TestPage() {
               <tr key={run.id}>
                 <td><Link href={`/runs/${run.id}`}>{run.id}</Link></td>
                 <td><Status value={run.status} /></td>
-                <td><Status value={run.visualStatus} /></td>
+                <td><Status value={visualStatusForRun(run)} /></td>
                 <td>{formatDuration(run.durationMs)}</td>
                 <td>{formatDateTime(run.createdAt)}</td>
               </tr>
@@ -94,4 +102,9 @@ export default function TestPage() {
       ) : null}
     </>
   );
+}
+
+function visualStatusForRun(run: TestRecord["runs"][number]) {
+  if (!run.visualEnabled) return "disabled";
+  return run.visualStatus ?? "pending";
 }

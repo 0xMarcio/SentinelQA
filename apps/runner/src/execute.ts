@@ -3,11 +3,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { chromium, type BrowserContextOptions, type Page } from "playwright";
+import { chromium, type BrowserContext, type BrowserContextOptions, type Page } from "playwright";
 import { prisma, type Prisma } from "@sentinelqa/db";
-import { compileTestDsl, interpolateVariables, interpolateObject, mergeVariables, type TestStep, type VisualSettings } from "@sentinelqa/dsl";
+import {
+  compileTestDsl,
+  interpolateObject,
+  interpolateVariables,
+  mergeBrowserSettings,
+  mergeVariables,
+  type TestStep,
+  type VisualSettings
+} from "@sentinelqa/dsl";
 import { ArtifactStorage, artifactKey } from "@sentinelqa/storage";
 import { runStepCommand } from "./commands.js";
+import { hideCursor } from "./cursor.js";
 
 const defaultUserAgentSource = "https://ua.syntax9.ai/api/all.json";
 
@@ -29,6 +38,19 @@ interface UserAgentRecord {
   user_agent: string;
 }
 
+interface BrowserCookieSetting {
+  name: string;
+  value: string;
+  url?: string | null;
+  domain?: string | null;
+  path?: string | null;
+  expires?: number | null;
+  httpOnly?: boolean;
+  secure?: boolean | null;
+  sameSite?: "Strict" | "Lax" | "None" | null;
+}
+
+type ResolvedCookie = Parameters<BrowserContext["addCookies"]>[0][number];
 type Redactor = <T>(value: T) => T;
 
 export async function executeRun(runId: string): Promise<void> {
@@ -58,6 +80,7 @@ export async function executeRun(runId: string): Promise<void> {
   }
 
   const dsl = compiled.dsl;
+  const browserSettings = mergeBrowserSettings(run.test.suite.browserOptions, dsl.browser);
   const suiteSecrets = objectToStrings(run.test.suite.secretVariables);
   const secretVariableNames = new Set([...Object.keys(dsl.secretVariables), ...Object.keys(suiteSecrets)]);
   const redactSecrets = createSecretRedactor([...Object.values(dsl.secretVariables), ...Object.values(suiteSecrets)]);
@@ -79,27 +102,34 @@ export async function executeRun(runId: string): Promise<void> {
   await mkdir(videoDir, { recursive: true });
 
   const viewport = objectToViewport(run.viewport);
+  const startUrl = interpolateVariables(run.startUrl, runtimeVariables);
   const browser = await chromium.launch({
     headless: process.env.RUNNER_HEADLESS !== "false",
     args: [`--window-size=${viewport.width},${viewport.height}`, "--force-device-scale-factor=1"]
   });
-  const userAgent = await resolveUserAgent(dsl.browser, runtimeVariables);
-  const headers = resolveHeaders(dsl.browser.headers, runtimeVariables);
+  const userAgent = await resolveUserAgent(browserSettings, runtimeVariables);
+  const browserHeaders = clientHintHeadersForUserAgent(userAgent, browserSettings.userAgentPlatform);
+  const headers = resolveHeaders(browserSettings.headers, runtimeVariables);
+  const localStorage = resolveStorage(browserSettings.localStorage, runtimeVariables);
+  const cookies = resolveCookies(browserSettings.cookies, runtimeVariables, startUrl);
   const contextOptions: BrowserContextOptions = {
     viewport,
     screen: viewport,
     deviceScaleFactor: 1,
     isMobile: false,
     hasTouch: false,
-    locale: run.locale ?? dsl.browser.locale ?? undefined,
-    timezoneId: run.timezone ?? dsl.browser.timezone ?? undefined,
+    locale: run.locale ?? browserSettings.locale ?? undefined,
+    timezoneId: run.timezone ?? browserSettings.timezone ?? undefined,
     geolocation: objectToGeolocation(run.geolocation),
     permissions: run.geolocation ? ["geolocation"] : [],
     userAgent,
-    extraHTTPHeaders: Object.keys(headers).length > 0 ? headers : undefined,
+    extraHTTPHeaders: Object.keys(browserHeaders).length > 0 ? browserHeaders : undefined,
     recordVideo: run.videoEnabled ? { dir: videoDir, size: viewport } : undefined
   };
   const context = await browser.newContext(contextOptions);
+  await installInitialCookies(context, cookies);
+  await installInitialStorage(context, localStorage, startUrl);
+  await installScopedHeaders(context, headers, startUrl);
   if (run.traceEnabled) {
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
   }
@@ -127,22 +157,31 @@ export async function executeRun(runId: string): Promise<void> {
   let stop = false;
 
   try {
-    const startUrl = interpolateVariables(run.startUrl, runtimeVariables);
     const executableSteps = await expandImportSteps(dsl.steps, run.projectId, runtimeVariables, [run.testId]);
     const firstStep = executableSteps[0];
     if (startUrl && startUrl !== "about:blank" && firstStep?.command !== "open") {
       await page.goto(startUrl, { waitUntil: "load" });
-      await waitForPageReady(page, Number(process.env.RUNNER_NAVIGATION_SETTLE_MS ?? dsl.browser.navigationSettleMs));
+      await waitForPageReady(page, Number(process.env.RUNNER_NAVIGATION_SETTLE_MS ?? browserSettings.navigationSettleMs));
     }
-    const actionDelayMs = Number(process.env.RUNNER_ACTION_DELAY_MS ?? dsl.browser.actionDelayMs);
-    const navigationSettleMs = Number(process.env.RUNNER_NAVIGATION_SETTLE_MS ?? dsl.browser.navigationSettleMs);
+    const actionDelayMs = Number(process.env.RUNNER_ACTION_DELAY_MS ?? browserSettings.actionDelayMs);
+    const navigationSettleMs = Number(process.env.RUNNER_NAVIGATION_SETTLE_MS ?? browserSettings.navigationSettleMs);
     for (const rawStep of executableSteps) {
       if (stop) break;
       const step = interpolateObject(rawStep, runtimeVariables) as TestStep;
       if (step.conditionJs) {
         const condition = await page.evaluate(step.conditionJs).catch(() => false);
         if (!condition) {
-          await recordStep(run.id, step, "skipped", new Date(), new Date(), null, "conditionJs returned false", page.url(), {});
+          await recordStep(
+            run.id,
+            step,
+            "skipped",
+            new Date(),
+            new Date(),
+            null,
+            "conditionJs returned false",
+            page.url(),
+            redactSecrets(stepDisplayMetadata(step))
+          );
           continue;
         }
       }
@@ -168,18 +207,24 @@ export async function executeRun(runId: string): Promise<void> {
             });
             return artifact.id;
           },
-          defaultTimeoutMs: dsl.browser.elementTimeoutMs
+          defaultTimeoutMs: browserSettings.elementTimeoutMs
         });
         await settleAfterStep(page, step, actionDelayMs, navigationSettleMs);
         const stepFinished = new Date();
-        const metadata = redactSecrets(withStepConsole(result.metadata ?? {}, consoleMessages.slice(consoleStart)));
+        const metadata = redactSecrets({
+          ...withStepConsole(result.metadata ?? {}, consoleMessages.slice(consoleStart)),
+          ...stepDisplayMetadata(step)
+        });
         await recordStep(run.id, step, "passed", stepStarted, stepFinished, null, null, page.url(), metadata);
         stop = result.stop ?? false;
       } catch (error) {
         const stepFinished = new Date();
         const screenshotId = await captureStepFailure(run.id, storage, page, step.id, viewport).catch(() => null);
         const message = redactSecrets(error instanceof Error ? error.message : String(error));
-        const metadata = redactSecrets(withStepConsole({}, consoleMessages.slice(consoleStart)));
+        const metadata = redactSecrets({
+          ...withStepConsole({}, consoleMessages.slice(consoleStart)),
+          ...stepDisplayMetadata(step)
+        });
         await recordStep(
           run.id,
           step,
@@ -213,7 +258,7 @@ export async function executeRun(runId: string): Promise<void> {
       dsl.visual,
       viewport,
       run.visualEnabled,
-      Number(process.env.RUNNER_FINAL_SETTLE_MS ?? dsl.browser.finalScreenshotDelayMs)
+      Number(process.env.RUNNER_FINAL_SETTLE_MS ?? browserSettings.finalScreenshotDelayMs)
     ).catch((error) => {
       console.error(`Failed to persist final artifacts for run ${run.id}:`, error);
     });
@@ -359,6 +404,14 @@ async function recordStep(
   });
 }
 
+function stepDisplayMetadata(step: TestStep) {
+  return {
+    stepTarget: step.target ?? null,
+    stepValue: step.privateValue ? "[private]" : step.value ?? null,
+    variableName: step.variableName ?? null
+  };
+}
+
 async function captureStepFailure(
   runId: string,
   storage: ArtifactStorage,
@@ -369,6 +422,7 @@ async function captureStepFailure(
   if ("waitForLoadState" in page) {
     await waitForPageReady(page as Page, Number(process.env.RUNNER_FINAL_SETTLE_MS ?? 3000));
   }
+  await hideCursor(page);
   const screenshot = await page.screenshot({ fullPage: false, caret: "initial" });
   const uploaded = await storage.putBuffer(artifactKey(runId, "screenshot", `${stepId}-failure.png`), screenshot, "image/png");
   const artifact = await prisma.artifact.create({
@@ -400,6 +454,7 @@ async function persistFinalArtifacts(
   finalDelayMs: number
 ) {
   if (captureFinalScreenshot) {
+    await hideCursor(page);
     await waitForPageReady(page, Number(process.env.RUNNER_NAVIGATION_SETTLE_MS ?? 3000));
     if (finalDelayMs > 0) {
       await page.waitForTimeout(finalDelayMs);
@@ -457,6 +512,7 @@ async function persistFinalArtifacts(
 }
 
 async function captureFinalScreenshotForVisual(page: Page, visual: VisualSettings, viewport: { width: number; height: number }) {
+  await hideCursor(page);
   const exclusions = visual.screenshotExclusions.filter((selector) => selector.trim().length > 0);
   if (exclusions.length > 0) {
     await page
@@ -647,6 +703,176 @@ function resolveHeaders(headers: Record<string, string>, variables: Record<strin
     resolved[name] = interpolateVariables(rawValue, variables);
   }
   return resolved;
+}
+
+function clientHintHeadersForUserAgent(userAgent: string | undefined, configuredPlatform?: string | null): Record<string, string> {
+  if (!userAgent) return {};
+
+  const major = userAgent.match(/(?:Chrome|Chromium|Edg)\/(\d+)/)?.[1];
+  if (!major) return {};
+
+  const brand = userAgent.includes("Edg/") ? "Microsoft Edge" : userAgent.includes("Chromium/") ? "Chromium" : "Google Chrome";
+  const platform = clientHintPlatform(userAgent, configuredPlatform);
+  const mobile = /Android|iPhone|iPad|Mobile/i.test(userAgent) ? "?1" : "?0";
+
+  return {
+    "sec-ch-ua": `"Chromium";v="${major}", "${brand}";v="${major}", "Not=A?Brand";v="24"`,
+    "sec-ch-ua-mobile": mobile,
+    "sec-ch-ua-platform": `"${platform}"`
+  };
+}
+
+function clientHintPlatform(userAgent: string, configuredPlatform?: string | null) {
+  const platform = normalizeUserAgentPlatform(configuredPlatform ?? "");
+  const mapped: Record<string, string> = {
+    windows: "Windows",
+    macos: "macOS",
+    linux: "Linux",
+    ubuntu: "Linux",
+    android: "Android",
+    iphone: "iOS",
+    ipad: "iOS"
+  };
+  if (mapped[platform]) return mapped[platform];
+
+  if (userAgent.includes("Windows")) return "Windows";
+  if (userAgent.includes("Macintosh")) return "macOS";
+  if (userAgent.includes("Android")) return "Android";
+  if (userAgent.includes("iPhone") || userAgent.includes("iPad")) return "iOS";
+  return "Linux";
+}
+
+function resolveStorage(entries: Record<string, string>, variables: Record<string, string>) {
+  const resolved: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(entries ?? {})) {
+    const key = rawKey.trim();
+    if (!key) continue;
+    resolved[key] = interpolateVariables(rawValue, variables);
+  }
+  return resolved;
+}
+
+function resolveCookies(cookies: BrowserCookieSetting[] | undefined, variables: Record<string, string>, startUrl: string) {
+  const resolved: ResolvedCookie[] = [];
+  for (const cookie of cookies ?? []) {
+    const name = interpolateVariables(cookie.name ?? "", variables).trim();
+    if (!name) continue;
+
+    const explicitUrl = interpolateVariables(cookie.url ?? "", variables).trim();
+    const domain = interpolateVariables(cookie.domain ?? "", variables).trim();
+    const path = interpolateVariables(cookie.path ?? "", variables).trim() || "/";
+    const url = explicitUrl || (!domain ? startUrl : "");
+    const secure = cookie.secure ?? (url ? isHttpsUrl(url) : true);
+    const base: Omit<ResolvedCookie, "url" | "domain" | "path"> = {
+      name,
+      value: interpolateVariables(cookie.value ?? "", variables),
+      httpOnly: cookie.httpOnly ?? false,
+      secure
+    };
+
+    if (cookie.sameSite) {
+      base.sameSite = cookie.sameSite;
+    }
+    if (typeof cookie.expires === "number") {
+      base.expires = cookie.expires;
+    }
+
+    if (url && isValidUrl(url)) {
+      resolved.push({ ...base, url });
+      continue;
+    }
+    if (domain) {
+      resolved.push({ ...base, domain, path });
+    }
+  }
+  return resolved;
+}
+
+async function installInitialCookies(context: BrowserContext, cookies: ResolvedCookie[]) {
+  if (cookies.length === 0) return;
+  await context.addCookies(cookies);
+}
+
+async function installInitialStorage(context: BrowserContext, entries: Record<string, string>, startUrl: string) {
+  if (Object.keys(entries).length === 0) return;
+  const rootDomain = rootDomainForUrl(startUrl);
+  if (!rootDomain) return;
+
+  await context.addInitScript(
+    ({ entries: initialEntries, rootDomain: domain }) => {
+      try {
+        const hostname = window.location.hostname.toLowerCase();
+        if (hostname !== domain && !hostname.endsWith(`.${domain}`)) return;
+        for (const [key, value] of Object.entries(initialEntries)) {
+          window.localStorage.setItem(key, value);
+        }
+      } catch {
+        // Some browser contexts disallow storage for opaque origins.
+      }
+    },
+    { entries, rootDomain }
+  );
+}
+
+async function installScopedHeaders(context: BrowserContext, headers: Record<string, string>, startUrl: string) {
+  if (Object.keys(headers).length === 0) return;
+  const rootDomain = rootDomainForUrl(startUrl);
+  if (!rootDomain) return;
+
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    if (!shouldApplyCustomHeaders(request.url(), rootDomain)) {
+      await route.continue();
+      return;
+    }
+
+    await route.continue({
+      headers: {
+        ...request.headers(),
+        ...headers
+      }
+    });
+  });
+}
+
+function shouldApplyCustomHeaders(requestUrl: string, rootDomain: string) {
+  try {
+    const hostname = new URL(requestUrl).hostname.toLowerCase();
+    return hostname === rootDomain || hostname.endsWith(`.${rootDomain}`);
+  } catch {
+    return false;
+  }
+}
+
+function rootDomainForUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    if (hostname === "localhost" || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":")) {
+      return hostname;
+    }
+    const parts = hostname.split(".").filter(Boolean);
+    if (parts.length <= 2) return hostname;
+    return parts.slice(-2).join(".");
+  } catch {
+    return null;
+  }
+}
+
+function isValidUrl(value: string) {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function publicRuntimeVariables(variables: Record<string, string>, secretNames: Set<string>) {

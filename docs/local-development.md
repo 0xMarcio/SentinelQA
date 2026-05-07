@@ -19,7 +19,7 @@
 3. Prepare the database:
 
    ```bash
-   pnpm db:migrate
+   pnpm db:push
    pnpm db:seed
    ```
 

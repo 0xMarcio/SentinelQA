@@ -899,6 +899,13 @@ input[type="file"]::file-selector-button:hover {
   align-items: end;
 }
 
+.cookie-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(220px, 1.25fr) minmax(170px, 0.9fr) minmax(90px, 0.4fr) 34px;
+  gap: 10px;
+  align-items: end;
+}
+
 .key-value-remove {
   height: 34px;
   justify-content: center;
@@ -1424,6 +1431,12 @@ input[type="file"]::file-selector-button:hover {
   font-weight: 500;
 }
 
+.step-joiner {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .step-subline {
   color: var(--muted);
   font-size: 12.5px;
@@ -1871,6 +1884,10 @@ input[type="file"]::file-selector-button:hover {
   }
 
   .key-value-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cookie-row {
     grid-template-columns: 1fr;
   }
 

@@ -75,6 +75,9 @@ interface StepResult {
     consoleMessages?: ConsoleMessage[];
     text?: string;
     result?: unknown;
+    stepTarget?: string | null;
+    stepValue?: string | null;
+    variableName?: string | null;
     [key: string]: unknown;
   };
 }
@@ -353,8 +356,7 @@ function StepRow({ step, start, testId, options }: { step: StepResult; start: bo
       <div className="step-body">
         <div className="step-mainline">
           <Icon size={20} />
-          <span>{commandLabel(step.command)}</span>
-          {step.resolvedTarget ? <code>{step.resolvedTarget}</code> : null}
+          <StepSummary step={step} />
           {options.http && typeof step.metadata?.httpStatus === "number" ? <span className="http-chip">HTTP {step.metadata.httpStatus}</span> : null}
           {options.errors && step.error ? <span className="error-chip">{step.error}</span> : null}
         </div>
@@ -376,6 +378,120 @@ function StepRow({ step, start, testId, options }: { step: StepResult; start: bo
       </div>
     </article>
   );
+}
+
+function StepSummary({ step }: { step: StepResult }) {
+  const target = displayStepValue(step.resolvedTarget ?? step.metadata?.stepTarget);
+  const value = displayStepValue(step.metadata?.stepValue);
+  const variableName = displayStepValue(step.metadata?.variableName);
+
+  if (step.command === "assertTextContains" || step.command === "assertTextEquals") {
+    return (
+      <>
+        <span>Check text in</span>
+        {target ? <code>{target}</code> : null}
+        {value ? <span className="step-joiner">{step.command === "assertTextEquals" ? "equals" : "contains"}</span> : null}
+        {value ? <code>{value}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "fill") {
+    return (
+      <>
+        <span>Enter</span>
+        {value ? <code>{value}</code> : null}
+        {target ? <span className="step-joiner">into</span> : null}
+        {target ? <code>{target}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "select") {
+    return (
+      <>
+        <span>Select</span>
+        {value ? <code>{value}</code> : null}
+        {target ? <span className="step-joiner">in</span> : null}
+        {target ? <code>{target}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "keypress") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {value ? <code>{value}</code> : null}
+        {target ? <span className="step-joiner">in</span> : null}
+        {target ? <code>{target}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "pause") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {value ? <code>{value} ms</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "assertUrlContains") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {value ?? target ? <code>{value ?? target}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "setVariable") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {variableName ? <code>{variableName}</code> : null}
+        {value ? <span className="step-joiner">=</span> : null}
+        {value ? <code>{value}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "captureScreenshot") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {value ? <code>{value}</code> : target ? <code>{target}</code> : null}
+      </>
+    );
+  }
+
+  if (step.command === "executeJs" || step.command === "assertJsReturnsTrue") {
+    return (
+      <>
+        <span>{commandLabel(step.command)}</span>
+        {target ? <code>{summarizeScript(target)}</code> : value ? <code>{summarizeScript(value)}</code> : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span>{commandLabel(step.command)}</span>
+      {target ? <code>{target}</code> : null}
+      {value ? <code>{value}</code> : null}
+    </>
+  );
+}
+
+function displayStepValue(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function summarizeScript(value: string) {
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  return trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
 }
 
 function artifactHasConsole(artifact: Artifact) {
@@ -466,9 +582,9 @@ function commandLabel(command: string) {
   const labels: Record<string, string> = {
     open: "Open",
     click: "Click on",
-    fill: "Assign into",
+    fill: "Enter",
     select: "Select",
-    keypress: "Press key in",
+    keypress: "Press",
     hover: "Hover on",
     dragDrop: "Drag and drop",
     uploadFile: "Upload file",
@@ -478,8 +594,8 @@ function commandLabel(command: string) {
     assertElementNotPresent: "Assert element absent",
     assertElementVisible: "Assert element visible",
     assertElementNotVisible: "Assert element hidden",
-    assertTextEquals: "Assert text equals",
-    assertTextContains: "Contains text",
+    assertTextEquals: "Check text",
+    assertTextContains: "Check text",
     assertUrlContains: "URL contains",
     assertJsReturnsTrue: "Assert JavaScript returns true",
     extractText: "Extract text from",

@@ -1,6 +1,7 @@
 import type { Locator, Page } from "playwright";
 import { AxeBuilder } from "@axe-core/playwright";
 import type { TestStep } from "@sentinelqa/dsl";
+import { animateCursorDrag, hideCursor, moveCursorToLocator, pulseCursor } from "./cursor.js";
 
 export type RuntimeVariables = Record<string, string>;
 
@@ -24,8 +25,8 @@ export const runnerCommands = {
   executeJs: "page.evaluate",
   assertElementPresent: "locator.count",
   assertElementNotPresent: "locator.count",
-  assertElementVisible: "locator.isVisible",
-  assertElementNotVisible: "locator.isVisible",
+  assertElementVisible: "locator.waitFor",
+  assertElementNotVisible: "locator.waitFor",
   assertTextEquals: "locator.textContent",
   assertTextContains: "locator.textContent",
   assertUrlContains: "page.url",
@@ -61,7 +62,7 @@ function impactScore(value: string | null | undefined): number {
   return impactRank[value ?? "minor"] ?? 1;
 }
 
-async function locatorForStep(page: Page, step: TestStep): Promise<{ locator: Locator; selector: string }> {
+async function locatorForStep(page: Page, step: TestStep, timeoutMs: number): Promise<{ locator: Locator; selector: string }> {
   const selectors = [step.target, ...(step.backupSelectors ?? [])].filter((selector): selector is string => Boolean(selector?.trim()));
   if (selectors.length === 0) {
     throw new Error("target is required");
@@ -69,6 +70,18 @@ async function locatorForStep(page: Page, step: TestStep): Promise<{ locator: Lo
 
   const misses: string[] = [];
   for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    const attached = await locator.waitFor({ state: "attached", timeout: timeoutMs }).then(
+      () => true,
+      (error) => {
+        misses.push(`${selector}: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    );
+    if (attached) {
+      return { locator, selector };
+    }
+
     const count = await page.locator(selector).count().catch((error) => {
       misses.push(`${selector}: ${error instanceof Error ? error.message : String(error)}`);
       return 0;
@@ -86,13 +99,19 @@ function timeoutFor(step: TestStep, ctx: CommandContext, fallback = 10000) {
   return step.timeoutMs ?? ctx.defaultTimeoutMs ?? fallback;
 }
 
-async function selectorExists(page: Page, step: TestStep): Promise<{ exists: boolean; selector?: string }> {
+async function selectorExists(page: Page, step: TestStep, timeoutMs = 0): Promise<{ exists: boolean; selector?: string }> {
   const selectors = [step.target, ...(step.backupSelectors ?? [])].filter((selector): selector is string => Boolean(selector?.trim()));
   if (selectors.length === 0) {
     throw new Error("target is required");
   }
 
   for (const selector of selectors) {
+    if (timeoutMs > 0) {
+      const attached = await page.locator(selector).first().waitFor({ state: "attached", timeout: timeoutMs }).then(() => true, () => false);
+      if (attached) {
+        return { exists: true, selector };
+      }
+    }
     const count = await page.locator(selector).count().catch(() => 0);
     if (count > 0) {
       return { exists: true, selector };
@@ -108,7 +127,7 @@ async function anySelectorVisible(page: Page, step: TestStep, timeoutMs: number)
   }
 
   for (const selector of selectors) {
-    const visible = await page.locator(selector).first().isVisible({ timeout: timeoutMs }).catch(() => false);
+    const visible = await page.locator(selector).first().waitFor({ state: "visible", timeout: timeoutMs }).then(() => true, () => false);
     if (visible) {
       return { visible: true, selector };
     }
@@ -116,9 +135,44 @@ async function anySelectorVisible(page: Page, step: TestStep, timeoutMs: number)
   return { visible: false };
 }
 
+function shouldAutoScroll(step: TestStep): boolean {
+  return (step.command === "assertElementPresent" || step.command === "assertElementVisible") && step.autoScroll !== false;
+}
+
+async function scrollIfEnabled(locator: Locator, step: TestStep, timeoutMs: number): Promise<boolean> {
+  if (!shouldAutoScroll(step)) {
+    return false;
+  }
+
+  return locator.scrollIntoViewIfNeeded({ timeout: Math.min(timeoutMs, 5000) }).then(() => true, () => false);
+}
+
 async function textFor(page: Page, step: TestStep, timeoutMs: number): Promise<{ text: string; selector: string }> {
-  const { locator, selector } = await locatorForStep(page, step);
+  const { locator, selector } = await locatorForStep(page, step, timeoutMs);
   return { text: (await locator.textContent({ timeout: timeoutMs }))?.trim() ?? "", selector };
+}
+
+async function waitForText(
+  page: Page,
+  step: TestStep,
+  timeoutMs: number,
+  expected: string,
+  mode: "equals" | "contains"
+): Promise<{ text: string; selector: string }> {
+  const startedAt = Date.now();
+  const { locator, selector } = await locatorForStep(page, step, timeoutMs);
+  const deadline = startedAt + timeoutMs;
+  let text = "";
+
+  while (Date.now() <= deadline) {
+    text = (await locator.textContent({ timeout: Math.min(1000, Math.max(1, deadline - Date.now())) }).catch(() => ""))?.trim() ?? "";
+    if (mode === "equals" ? text === expected : text.includes(expected)) {
+      return { text, selector };
+    }
+    await page.waitForTimeout(250);
+  }
+
+  return { text, selector };
 }
 
 async function evaluateStepScript(page: Page, script: string): Promise<unknown> {
@@ -144,25 +198,30 @@ export async function runStepCommand(step: TestStep, ctx: CommandContext): Promi
       }
     case "click":
       {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.click({ timeout: timeoutFor(step, ctx) });
+        await pulseCursor(page);
         return { metadata: { resolvedSelector: selector } };
       }
     case "fill":
       {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.fill(requireValue(value, "value"), { timeout: timeoutFor(step, ctx) });
         return { metadata: { resolvedSelector: selector } };
       }
     case "select":
       {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.selectOption(requireValue(value, "value"), { timeout: timeoutFor(step, ctx) });
         return { metadata: { resolvedSelector: selector } };
       }
     case "keypress":
       if (target) {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.press(requireValue(value, "value"), { timeout: timeoutFor(step, ctx) });
         return { metadata: { resolvedSelector: selector } };
       } else {
@@ -171,18 +230,25 @@ export async function runStepCommand(step: TestStep, ctx: CommandContext): Promi
       return {};
     case "hover":
       {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.hover({ timeout: timeoutFor(step, ctx) });
         return { metadata: { resolvedSelector: selector } };
       }
     case "dragDrop":
-      await (await locatorForStep(page, step)).locator.dragTo(page.locator(requireValue(value, "value")).first(), {
-        timeout: timeoutFor(step, ctx)
-      });
-      return {};
+      {
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        const targetLocator = page.locator(requireValue(value, "value")).first();
+        await animateCursorDrag(page, locator, targetLocator, timeoutFor(step, ctx));
+        await locator.dragTo(targetLocator, {
+          timeout: timeoutFor(step, ctx)
+        });
+        return { metadata: { resolvedSelector: selector } };
+      }
     case "uploadFile":
       {
-        const { locator, selector } = await locatorForStep(page, step);
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        await moveCursorToLocator(page, locator, timeoutFor(step, ctx));
         await locator.setInputFiles(requireValue(value, "value"), { timeout: timeoutFor(step, ctx) });
         return { metadata: { resolvedSelector: selector } };
       }
@@ -193,30 +259,34 @@ export async function runStepCommand(step: TestStep, ctx: CommandContext): Promi
       return { metadata: { result: await evaluateStepScript(page, requireValue(target ?? value, "script")) } };
     case "assertElementPresent":
       {
-        const match = await selectorExists(page, step);
-        if (!match.exists) throw new Error("Element was not present");
-        return { metadata: { resolvedSelector: match.selector } };
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        const autoScrolled = await scrollIfEnabled(locator, step, timeoutFor(step, ctx));
+        return { metadata: { resolvedSelector: selector, autoScrolled } };
       }
     case "assertElementNotPresent":
       if ((await selectorExists(page, step)).exists) throw new Error("Element was present");
       return {};
     case "assertElementVisible":
       {
-        const match = await anySelectorVisible(page, step, timeoutFor(step, ctx));
-        if (!match.visible) throw new Error("Element was not visible");
-        return { metadata: { resolvedSelector: match.selector } };
+        const { locator, selector } = await locatorForStep(page, step, timeoutFor(step, ctx));
+        const autoScrolled = await scrollIfEnabled(locator, step, timeoutFor(step, ctx));
+        const visible = await locator.waitFor({ state: "visible", timeout: timeoutFor(step, ctx) }).then(() => true, () => false);
+        if (!visible) throw new Error("Element was not visible");
+        return { metadata: { resolvedSelector: selector, autoScrolled } };
       }
     case "assertElementNotVisible":
       if ((await anySelectorVisible(page, step, timeoutFor(step, ctx))).visible) throw new Error("Element was visible");
       return {};
     case "assertTextEquals": {
-      const { text, selector } = await textFor(page, step, timeoutFor(step, ctx));
+      const expected = requireValue(value, "value");
+      const { text, selector } = await waitForText(page, step, timeoutFor(step, ctx), expected, "equals");
       if (text !== requireValue(value, "value")) throw new Error(`Expected text "${value}", received "${text}"`);
       return { metadata: { text, resolvedSelector: selector } };
     }
     case "assertTextContains": {
-      const { text, selector } = await textFor(page, step, timeoutFor(step, ctx));
-      if (!text.includes(requireValue(value, "value"))) throw new Error(`Expected text to contain "${value}", received "${text}"`);
+      const expected = requireValue(value, "value");
+      const { text, selector } = await waitForText(page, step, timeoutFor(step, ctx), expected, "contains");
+      if (!text.includes(expected)) throw new Error(`Expected text to contain "${value}", received "${text}"`);
       return { metadata: { text, resolvedSelector: selector } };
     }
     case "assertUrlContains":
@@ -252,6 +322,7 @@ export async function runStepCommand(step: TestStep, ctx: CommandContext): Promi
       return { metadata: { violationCount: results.violations.length, thresholdViolationCount: 0, threshold: value || "any", artifactId } };
     }
     case "captureScreenshot": {
+      await hideCursor(page);
       const screenshotTarget = target?.trim();
       const label = value ?? (!screenshotTarget ? step.id : undefined);
       const locator = screenshotTarget ? page.locator(screenshotTarget).first() : null;

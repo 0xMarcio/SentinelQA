@@ -92,9 +92,10 @@ async function createSuite(
   name: string,
   description: string,
   variables: Record<string, string> = {},
-  secretVariables: Record<string, string> = {}
+  secretVariables: Record<string, string> = {},
+  browserOptions: Record<string, unknown> = {}
 ) {
-  return prisma.suite.create({ data: { projectId, name, description, variables, secretVariables } });
+  return prisma.suite.create({ data: { projectId, name, description, variables, secretVariables, browserOptions } });
 }
 
 async function createTest(projectId: string, suiteId: string, testDsl: TestDsl) {

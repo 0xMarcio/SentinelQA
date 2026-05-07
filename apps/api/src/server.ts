@@ -4,7 +4,7 @@ import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 import { parse } from "csv-parse/sync";
 import { z } from "zod";
-import { compileTestDsl, type TestDsl } from "@sentinelqa/dsl";
+import { browserSettingsSchema, compileTestDsl, type TestDsl } from "@sentinelqa/dsl";
 import { prisma, type Prisma } from "@sentinelqa/db";
 import { authenticate, getDevUser } from "./auth.js";
 import { emailAddressForRun, getLatestMailboxEmail, listMailboxEmails, listRunEmails } from "./email.js";
@@ -18,7 +18,8 @@ const suiteBody = z.object({
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   variables: varsSchema.optional(),
-  secretVariables: varsSchema.optional()
+  secretVariables: varsSchema.optional(),
+  browserOptions: browserSettingsSchema.partial().optional()
 });
 const testBody = z.object({
   name: z.string().min(1),
@@ -234,7 +235,8 @@ export async function buildServer() {
         name: body.name,
         description: body.description,
         variables: body.variables ?? {},
-        secretVariables: body.secretVariables ?? {}
+        secretVariables: body.secretVariables ?? {},
+        browserOptions: body.browserOptions ?? {}
       }
     });
   });
@@ -265,7 +267,8 @@ export async function buildServer() {
         name: body.name,
         description: body.description,
         variables: body.variables ?? {},
-        secretVariables: body.secretVariables ?? {}
+        secretVariables: body.secretVariables ?? {},
+        browserOptions: body.browserOptions ?? {}
       }
     });
   });
@@ -292,7 +295,8 @@ export async function buildServer() {
         name: body.name ?? `${source.name} copy`,
         description: source.description,
         variables: source.variables as Prisma.InputJsonValue,
-        secretVariables: source.secretVariables as Prisma.InputJsonValue
+        secretVariables: source.secretVariables as Prisma.InputJsonValue,
+        browserOptions: source.browserOptions as Prisma.InputJsonValue
       }
     });
     for (const test of source.tests) {

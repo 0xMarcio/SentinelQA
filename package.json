@@ -13,7 +13,7 @@
     "test": "vitest run",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "db:migrate": "pnpm --filter @sentinelqa/db db:migrate",
+    "db:push": "pnpm --filter @sentinelqa/db db:push",
     "db:seed": "pnpm --filter @sentinelqa/db db:seed",
     "db:generate": "pnpm --filter @sentinelqa/db db:generate"
   },

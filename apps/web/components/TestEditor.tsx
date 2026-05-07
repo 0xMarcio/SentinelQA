@@ -17,23 +17,20 @@ import {
   Settings,
   Trash2
 } from "lucide-react";
-import { stepCommands, type BrowserSettings, type StepCommand, type TestDsl, type TestStep, type VisualSettings } from "@sentinelqa/dsl";
+import { stepCommands, type StepCommand, type TestDsl, type TestStep, type VisualSettings } from "@sentinelqa/dsl";
 import { api } from "../lib/api";
+import {
+  BrowserOptionsEditor,
+  cookiesToRows,
+  normalizeBrowser,
+  normalizeUserAgentBrowser,
+  normalizeUserAgentPlatform,
+  rowsToCookies,
+  type CookieRow,
+  type UserAgentBrowser,
+  type UserAgentPlatform
+} from "./BrowserOptionsEditor";
 import { KeyValueEditor, recordToRows, rowsToRecord, type KeyValueRow } from "./KeyValueEditor";
-
-const defaultBrowser: BrowserSettings = {
-  browser: "chromium",
-  viewport: { width: 1920, height: 1080 },
-  userAgentBrowser: "chrome",
-  userAgentPlatform: "linux",
-  headers: {},
-  actionDelayMs: 500,
-  navigationSettleMs: 1200,
-  finalScreenshotDelayMs: 1000,
-  elementTimeoutMs: 15000,
-  trace: true,
-  video: true
-};
 
 const defaultVisual: VisualSettings = {
   enabled: false,
@@ -50,27 +47,8 @@ const presetViewports = [
 ];
 
 type SettingsTab = "details" | "browser" | "timing" | "display" | "variables";
-type UserAgentBrowser = "chrome" | "edge" | "firefox" | "safari";
-type UserAgentPlatform = "windows" | "macos" | "linux" | "ubuntu" | "android" | "iphone" | "ipad";
 
 type StepInputKind = "text" | "url" | "selector" | "textarea" | "script" | "number" | "select";
-
-const userAgentBrowsers: Array<{ label: string; value: UserAgentBrowser }> = [
-  { label: "Chrome", value: "chrome" },
-  { label: "Microsoft Edge", value: "edge" },
-  { label: "Firefox", value: "firefox" },
-  { label: "Safari", value: "safari" }
-];
-
-const userAgentPlatforms: Array<{ label: string; value: UserAgentPlatform }> = [
-  { label: "Windows desktop", value: "windows" },
-  { label: "macOS desktop", value: "macos" },
-  { label: "Linux desktop", value: "linux" },
-  { label: "Ubuntu desktop", value: "ubuntu" },
-  { label: "Android mobile", value: "android" },
-  { label: "iPhone", value: "iphone" },
-  { label: "iPad", value: "ipad" }
-];
 
 interface StepFieldConfig {
   key: "target" | "value" | "variableName";
@@ -88,6 +66,7 @@ interface CommandEditorConfig {
   variableName?: StepFieldConfig;
   backups?: boolean;
   privateValue?: boolean;
+  autoScroll?: boolean;
 }
 
 const keyOptions = ["Enter", "Tab", "Escape", "Backspace", "Delete", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].map((key) => ({
@@ -166,7 +145,8 @@ const commandConfig: Record<StepCommand, CommandEditorConfig> = {
     label: "Element is present",
     group: "Assertions",
     target: { key: "target", label: "Element selector", kind: "selector", placeholder: "main h1" },
-    backups: true
+    backups: true,
+    autoScroll: true
   },
   assertElementNotPresent: {
     label: "Element is not present",
@@ -178,7 +158,8 @@ const commandConfig: Record<StepCommand, CommandEditorConfig> = {
     label: "Element is visible",
     group: "Assertions",
     target: { key: "target", label: "Element selector", kind: "selector", placeholder: ".toast" },
-    backups: true
+    backups: true,
+    autoScroll: true
   },
   assertElementNotVisible: {
     label: "Element is not visible",
@@ -284,6 +265,7 @@ function cleanForCommand(step: TestStep, command: StepCommand): TestStep {
     variableName: config.variableName ? step.variableName ?? "" : "",
     privateValue: config.privateValue ? step.privateValue : false,
     backupSelectors: config.backups ? step.backupSelectors ?? [] : [],
+    autoScroll: config.autoScroll ? step.autoScroll ?? true : undefined,
     ...defaults
   };
 }
@@ -300,22 +282,10 @@ function newStep(sequence: number, command: TestStep["command"] = "click"): Test
     notes: "",
     timeoutMs: null,
     backupSelectors: [],
+    autoScroll: undefined,
     conditionJs: "",
     sequence
   }, command);
-}
-
-function normalizeBrowser(browser?: Partial<BrowserSettings>): BrowserSettings {
-  return {
-    ...defaultBrowser,
-    ...browser,
-    userAgentPlatform: normalizeUserAgentPlatform(browser?.userAgentPlatform),
-    headers: browser?.headers ?? {},
-    viewport: {
-      width: browser?.viewport?.width ?? defaultBrowser.viewport.width,
-      height: browser?.viewport?.height ?? defaultBrowser.viewport.height
-    }
-  };
 }
 
 function normalizeVisual(visual?: Partial<VisualSettings>): VisualSettings {
@@ -326,15 +296,6 @@ function normalizeVisual(visual?: Partial<VisualSettings>): VisualSettings {
   };
 }
 
-function normalizeUserAgentPlatform(value: unknown): UserAgentPlatform {
-  if (value === "mac") return "macos";
-  return userAgentPlatforms.some((platform) => platform.value === value) ? value as UserAgentPlatform : "linux";
-}
-
-function normalizeUserAgentBrowser(value: unknown): UserAgentBrowser {
-  return userAgentBrowsers.some((browser) => browser.value === value) ? value as UserAgentBrowser : "chrome";
-}
-
 function exclusionsToText(exclusions: string[] = []) {
   return exclusions.join("\n");
 }
@@ -343,9 +304,19 @@ function textToExclusions(text: string) {
   return text.split(/\r?\n|,/).map((selector) => selector.trim()).filter(Boolean);
 }
 
-export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; testId?: string; initial?: TestDsl }) {
+export function TestEditor({
+  suiteId,
+  testId,
+  initial,
+  suiteBrowserOptions
+}: {
+  suiteId?: string;
+  testId?: string;
+  initial?: TestDsl;
+  suiteBrowserOptions?: Partial<TestDsl["browser"]>;
+}) {
   const router = useRouter();
-  const initialBrowser = normalizeBrowser(initial?.browser);
+  const initialBrowser = normalizeBrowser(initial?.browser ?? suiteBrowserOptions);
   const initialVisual = normalizeVisual(initial?.visual);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("details");
   const [name, setName] = useState(initial?.name ?? "Untitled test");
@@ -362,6 +333,8 @@ export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; tes
   const [userAgentBrowser, setUserAgentBrowser] = useState<UserAgentBrowser>(normalizeUserAgentBrowser(initialBrowser.userAgentBrowser));
   const [userAgentPlatform, setUserAgentPlatform] = useState<UserAgentPlatform>(normalizeUserAgentPlatform(initialBrowser.userAgentPlatform));
   const [headers, setHeaders] = useState<KeyValueRow[]>(recordToRows(initialBrowser.headers));
+  const [localStorageEntries, setLocalStorageEntries] = useState<KeyValueRow[]>(recordToRows(initialBrowser.localStorage));
+  const [cookies, setCookies] = useState<CookieRow[]>(cookiesToRows(initialBrowser.cookies));
   const [actionDelayMs, setActionDelayMs] = useState(initialBrowser.actionDelayMs);
   const [navigationSettleMs, setNavigationSettleMs] = useState(initialBrowser.navigationSettleMs);
   const [finalScreenshotDelayMs, setFinalScreenshotDelayMs] = useState(initialBrowser.finalScreenshotDelayMs);
@@ -402,6 +375,8 @@ export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; tes
         userAgentPlatform,
         acceptLanguage: null,
         headers: rowsToRecord(headers),
+        localStorage: rowsToRecord(localStorageEntries),
+        cookies: rowsToCookies(cookies),
         locale: null,
         timezone: null,
         actionDelayMs: Number(actionDelayMs),
@@ -415,11 +390,13 @@ export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; tes
     };
   }, [
     actionDelayMs,
+    cookies,
     customVariables,
     elementTimeoutMs,
     finalScreenshotDelayMs,
     headers,
     initial?.suiteVariables,
+    localStorageEntries,
     name,
     navigationSettleMs,
     screenshotExclusions,
@@ -575,34 +552,18 @@ export function TestEditor({ suiteId, testId, initial }: { suiteId?: string; tes
           ) : null}
 
           {settingsTab === "browser" ? (
-            <div className="settings-stack">
-              <div className="grid two">
-                <label className="field">
-                  <span>Browser</span>
-                  <select value={userAgentBrowser} onChange={(event) => setUserAgentBrowser(event.target.value as UserAgentBrowser)}>
-                    {userAgentBrowsers.map((browser) => (
-                      <option key={browser.value} value={browser.value}>{browser.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Platform</span>
-                  <select value={userAgentPlatform} onChange={(event) => setUserAgentPlatform(event.target.value as UserAgentPlatform)}>
-                    {userAgentPlatforms.map((platform) => (
-                      <option key={platform.value} value={platform.value}>{platform.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <KeyValueEditor
-                title="Headers"
-                rows={headers}
-                onChange={setHeaders}
-                addLabel="Add header"
-                namePlaceholder="Authorization"
-                valuePlaceholder="Bearer {{apiToken}}"
-              />
-            </div>
+            <BrowserOptionsEditor
+              userAgentBrowser={userAgentBrowser}
+              setUserAgentBrowser={setUserAgentBrowser}
+              userAgentPlatform={userAgentPlatform}
+              setUserAgentPlatform={setUserAgentPlatform}
+              headers={headers}
+              setHeaders={setHeaders}
+              localStorageEntries={localStorageEntries}
+              setLocalStorageEntries={setLocalStorageEntries}
+              cookies={cookies}
+              setCookies={setCookies}
+            />
           ) : null}
 
           {settingsTab === "timing" ? (
@@ -843,6 +804,18 @@ function StepSpecificFields({
               placeholder={String(elementTimeoutMs)}
             />
           </div>
+          {config.autoScroll ? (
+            <label className="field">
+              <span>Scroll to element</span>
+              <select
+                value={step.autoScroll === false ? "no" : "yes"}
+                onChange={(event) => updateStep(index, { autoScroll: event.target.value === "yes" })}
+              >
+                <option value="yes">Enabled</option>
+                <option value="no">Disabled</option>
+              </select>
+            </label>
+          ) : null}
         </div>
 
         <div className="grid two">

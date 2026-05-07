@@ -52,6 +52,7 @@ export type SuiteCountAggregateOutputType = {
   description: number
   variables: number
   secretVariables: number
+  browserOptions: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -86,6 +87,7 @@ export type SuiteCountAggregateInputType = {
   description?: true
   variables?: true
   secretVariables?: true
+  browserOptions?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -171,6 +173,7 @@ export type SuiteGroupByOutputType = {
   description: string | null
   variables: runtime.JsonValue
   secretVariables: runtime.JsonValue
+  browserOptions: runtime.JsonValue
   createdAt: Date
   updatedAt: Date
   _count: SuiteCountAggregateOutputType | null
@@ -204,6 +207,7 @@ export type SuiteWhereInput = {
   description?: Prisma.StringNullableFilter<"Suite"> | string | null
   variables?: Prisma.JsonFilter<"Suite">
   secretVariables?: Prisma.JsonFilter<"Suite">
+  browserOptions?: Prisma.JsonFilter<"Suite">
   createdAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
   project?: Prisma.XOR<Prisma.ProjectScalarRelationFilter, Prisma.ProjectWhereInput>
@@ -223,6 +227,7 @@ export type SuiteOrderByWithRelationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   variables?: Prisma.SortOrder
   secretVariables?: Prisma.SortOrder
+  browserOptions?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   project?: Prisma.ProjectOrderByWithRelationInput
@@ -245,6 +250,7 @@ export type SuiteWhereUniqueInput = Prisma.AtLeast<{
   description?: Prisma.StringNullableFilter<"Suite"> | string | null
   variables?: Prisma.JsonFilter<"Suite">
   secretVariables?: Prisma.JsonFilter<"Suite">
+  browserOptions?: Prisma.JsonFilter<"Suite">
   createdAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
   project?: Prisma.XOR<Prisma.ProjectScalarRelationFilter, Prisma.ProjectWhereInput>
@@ -264,6 +270,7 @@ export type SuiteOrderByWithAggregationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   variables?: Prisma.SortOrder
   secretVariables?: Prisma.SortOrder
+  browserOptions?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SuiteCountOrderByAggregateInput
@@ -282,6 +289,7 @@ export type SuiteScalarWhereWithAggregatesInput = {
   description?: Prisma.StringNullableWithAggregatesFilter<"Suite"> | string | null
   variables?: Prisma.JsonWithAggregatesFilter<"Suite">
   secretVariables?: Prisma.JsonWithAggregatesFilter<"Suite">
+  browserOptions?: Prisma.JsonWithAggregatesFilter<"Suite">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Suite"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Suite"> | Date | string
 }
@@ -292,6 +300,7 @@ export type SuiteCreateInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -311,6 +320,7 @@ export type SuiteUncheckedCreateInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -326,6 +336,7 @@ export type SuiteUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -345,6 +356,7 @@ export type SuiteUncheckedUpdateInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -362,6 +374,7 @@ export type SuiteCreateManyInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -372,6 +385,7 @@ export type SuiteUpdateManyMutationInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -384,6 +398,7 @@ export type SuiteUncheckedUpdateManyInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -406,6 +421,7 @@ export type SuiteCountOrderByAggregateInput = {
   description?: Prisma.SortOrder
   variables?: Prisma.SortOrder
   secretVariables?: Prisma.SortOrder
+  browserOptions?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -606,6 +622,7 @@ export type SuiteCreateWithoutProjectInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   folder?: Prisma.FolderCreateNestedOneWithoutSuitesInput
@@ -623,6 +640,7 @@ export type SuiteUncheckedCreateWithoutProjectInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -669,6 +687,7 @@ export type SuiteScalarWhereInput = {
   description?: Prisma.StringNullableFilter<"Suite"> | string | null
   variables?: Prisma.JsonFilter<"Suite">
   secretVariables?: Prisma.JsonFilter<"Suite">
+  browserOptions?: Prisma.JsonFilter<"Suite">
   createdAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Suite"> | Date | string
 }
@@ -679,6 +698,7 @@ export type SuiteCreateWithoutFolderInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -696,6 +716,7 @@ export type SuiteUncheckedCreateWithoutFolderInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -737,6 +758,7 @@ export type SuiteCreateWithoutTestsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -755,6 +777,7 @@ export type SuiteUncheckedCreateWithoutTestsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   schedules?: Prisma.ScheduleUncheckedCreateNestedManyWithoutSuiteInput
@@ -785,6 +808,7 @@ export type SuiteUpdateWithoutTestsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -803,6 +827,7 @@ export type SuiteUncheckedUpdateWithoutTestsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   schedules?: Prisma.ScheduleUncheckedUpdateManyWithoutSuiteNestedInput
@@ -817,6 +842,7 @@ export type SuiteCreateWithoutDataSourcesInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -835,6 +861,7 @@ export type SuiteUncheckedCreateWithoutDataSourcesInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -865,6 +892,7 @@ export type SuiteUpdateWithoutDataSourcesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -883,6 +911,7 @@ export type SuiteUncheckedUpdateWithoutDataSourcesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -897,6 +926,7 @@ export type SuiteCreateWithoutSchedulesInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -915,6 +945,7 @@ export type SuiteUncheckedCreateWithoutSchedulesInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -945,6 +976,7 @@ export type SuiteUpdateWithoutSchedulesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -963,6 +995,7 @@ export type SuiteUncheckedUpdateWithoutSchedulesInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -977,6 +1010,7 @@ export type SuiteCreateWithoutRunsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -995,6 +1029,7 @@ export type SuiteUncheckedCreateWithoutRunsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -1025,6 +1060,7 @@ export type SuiteUpdateWithoutRunsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -1043,6 +1079,7 @@ export type SuiteUncheckedUpdateWithoutRunsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -1057,6 +1094,7 @@ export type SuiteCreateWithoutSuiteRunsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   project: Prisma.ProjectCreateNestedOneWithoutSuitesInput
@@ -1075,6 +1113,7 @@ export type SuiteUncheckedCreateWithoutSuiteRunsInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   tests?: Prisma.TestUncheckedCreateNestedManyWithoutSuiteInput
@@ -1105,6 +1144,7 @@ export type SuiteUpdateWithoutSuiteRunsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -1123,6 +1163,7 @@ export type SuiteUncheckedUpdateWithoutSuiteRunsInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -1138,6 +1179,7 @@ export type SuiteCreateManyProjectInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1148,6 +1190,7 @@ export type SuiteUpdateWithoutProjectInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   folder?: Prisma.FolderUpdateOneWithoutSuitesNestedInput
@@ -1165,6 +1208,7 @@ export type SuiteUncheckedUpdateWithoutProjectInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -1181,6 +1225,7 @@ export type SuiteUncheckedUpdateManyWithoutProjectInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1192,6 +1237,7 @@ export type SuiteCreateManyFolderInput = {
   description?: string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1202,6 +1248,7 @@ export type SuiteUpdateWithoutFolderInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   project?: Prisma.ProjectUpdateOneRequiredWithoutSuitesNestedInput
@@ -1219,6 +1266,7 @@ export type SuiteUncheckedUpdateWithoutFolderInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tests?: Prisma.TestUncheckedUpdateManyWithoutSuiteNestedInput
@@ -1235,6 +1283,7 @@ export type SuiteUncheckedUpdateManyWithoutFolderInput = {
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   variables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   secretVariables?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  browserOptions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1314,6 +1363,7 @@ export type SuiteSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   description?: boolean
   variables?: boolean
   secretVariables?: boolean
+  browserOptions?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -1334,6 +1384,7 @@ export type SuiteSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   description?: boolean
   variables?: boolean
   secretVariables?: boolean
+  browserOptions?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -1348,6 +1399,7 @@ export type SuiteSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   description?: boolean
   variables?: boolean
   secretVariables?: boolean
+  browserOptions?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -1362,11 +1414,12 @@ export type SuiteSelectScalar = {
   description?: boolean
   variables?: boolean
   secretVariables?: boolean
+  browserOptions?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SuiteOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "folderId" | "name" | "description" | "variables" | "secretVariables" | "createdAt" | "updatedAt", ExtArgs["result"]["suite"]>
+export type SuiteOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "folderId" | "name" | "description" | "variables" | "secretVariables" | "browserOptions" | "createdAt" | "updatedAt", ExtArgs["result"]["suite"]>
 export type SuiteInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
   folder?: boolean | Prisma.Suite$folderArgs<ExtArgs>
@@ -1405,6 +1458,7 @@ export type $SuitePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     description: string | null
     variables: runtime.JsonValue
     secretVariables: runtime.JsonValue
+    browserOptions: runtime.JsonValue
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["suite"]>
@@ -1844,6 +1898,7 @@ export interface SuiteFieldRefs {
   readonly description: Prisma.FieldRef<"Suite", 'String'>
   readonly variables: Prisma.FieldRef<"Suite", 'Json'>
   readonly secretVariables: Prisma.FieldRef<"Suite", 'Json'>
+  readonly browserOptions: Prisma.FieldRef<"Suite", 'Json'>
   readonly createdAt: Prisma.FieldRef<"Suite", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Suite", 'DateTime'>
 }

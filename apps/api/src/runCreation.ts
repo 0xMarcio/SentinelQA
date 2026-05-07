@@ -1,5 +1,5 @@
 import { prisma, type Prisma } from "@sentinelqa/db";
-import { compileTestDsl, interpolateVariables, mergeVariables, type TestDsl } from "@sentinelqa/dsl";
+import { compileTestDsl, interpolateVariables, mergeBrowserSettings, mergeVariables, type TestDsl } from "@sentinelqa/dsl";
 import { queues } from "./queues.js";
 
 export interface RunCreateInput {
@@ -44,6 +44,7 @@ export async function createTestRun(input: RunCreateInput) {
     throw new Error(compiled.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "));
   }
   const dsl = compiled.dsl;
+  const browser = mergeBrowserSettings(test.suite.browserOptions, dsl.browser);
   const environment = input.environmentId
     ? await prisma.environment.findUnique({ where: { id: input.environmentId } })
     : await prisma.environment.findFirst({ where: { projectId: test.projectId }, orderBy: { createdAt: "asc" } });
@@ -89,13 +90,13 @@ export async function createTestRun(input: RunCreateInput) {
       status: "queued",
       startUrl,
       variables: publicVariables(variables, secretVariableNames),
-      browser: dsl.browser.browser,
-      viewport: dsl.browser.viewport,
-      locale: dsl.browser.locale,
-      timezone: dsl.browser.timezone,
-      geolocation: dsl.browser.geolocation as Prisma.InputJsonValue,
-      traceEnabled: input.trace ?? dsl.browser.trace,
-      videoEnabled: input.video ?? dsl.browser.video,
+      browser: browser.browser,
+      viewport: browser.viewport,
+      locale: browser.locale,
+      timezone: browser.timezone,
+      geolocation: browser.geolocation as Prisma.InputJsonValue,
+      traceEnabled: input.trace ?? browser.trace,
+      videoEnabled: input.video ?? browser.video,
       visualEnabled: dsl.visual.enabled || test.visualEnabled
     }
   });

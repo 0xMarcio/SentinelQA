@@ -46,6 +46,7 @@ export const testStepSchema = z.object({
   notes: z.string().optional().nullable(),
   timeoutMs: z.number().int().min(0).max(300000).optional().nullable(),
   backupSelectors: z.array(z.string()).default([]),
+  autoScroll: z.boolean().optional().nullable(),
   conditionJs: z.string().optional().nullable(),
   sequence: z.number().int().min(0)
 });
@@ -78,6 +79,22 @@ export const browserSettingsSchema = z.object({
   userAgentPlatform: z.enum(["windows", "mac", "macos", "linux", "ubuntu", "android", "iphone", "ipad"]).default("linux"),
   acceptLanguage: z.string().optional().nullable(),
   headers: z.record(z.string(), z.string()).default({}),
+  localStorage: z.record(z.string(), z.string()).default({}),
+  cookies: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        value: z.string(),
+        url: z.string().url().optional().nullable(),
+        domain: z.string().optional().nullable(),
+        path: z.string().optional().nullable(),
+        expires: z.number().optional().nullable(),
+        httpOnly: z.boolean().default(false),
+        secure: z.boolean().optional().nullable(),
+        sameSite: z.enum(["Strict", "Lax", "None"]).optional().nullable()
+      })
+    )
+    .default([]),
   actionDelayMs: z.number().int().min(0).max(10000).default(500),
   navigationSettleMs: z.number().int().min(0).max(30000).default(1200),
   finalScreenshotDelayMs: z.number().int().min(0).max(30000).default(1000),
@@ -100,6 +117,8 @@ export const testDslSchema = z.object({
     userAgentBrowser: "chrome",
     userAgentPlatform: "linux",
     headers: {},
+    localStorage: {},
+    cookies: [],
     actionDelayMs: 500,
     navigationSettleMs: 1200,
     finalScreenshotDelayMs: 1000,

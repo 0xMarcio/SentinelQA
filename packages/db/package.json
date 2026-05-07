@@ -13,7 +13,7 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "dotenv -e ../../.env -e ../../.env.example -- prisma generate",
-    "db:migrate": "dotenv -e ../../.env -e ../../.env.example -- prisma migrate deploy && dotenv -e ../../.env -e ../../.env.example -- prisma generate",
+    "db:push": "dotenv -e ../../.env -e ../../.env.example -- prisma db push && dotenv -e ../../.env -e ../../.env.example -- prisma generate",
     "db:seed": "dotenv -e ../../.env -e ../../.env.example -- tsx prisma/seed.ts"
   },
   "dependencies": {

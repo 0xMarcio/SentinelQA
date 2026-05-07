@@ -4,6 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Copy, Save, Trash2 } from "lucide-react";
+import type { BrowserSettings } from "@sentinelqa/dsl";
+import {
+  BrowserOptionsEditor,
+  cookiesToRows,
+  normalizeBrowser,
+  normalizeUserAgentBrowser,
+  normalizeUserAgentPlatform,
+  rowsToCookies,
+  type CookieRow,
+  type UserAgentBrowser,
+  type UserAgentPlatform
+} from "../../../../components/BrowserOptionsEditor";
 import { KeyValueEditor, recordToRows, rowsToRecord, type KeyValueRow } from "../../../../components/KeyValueEditor";
 import { Loader } from "../../../../components/Loader";
 import { NavShell } from "../../../../components/NavShell";
@@ -15,6 +27,7 @@ interface SuiteSettings {
   description?: string | null;
   variables?: Record<string, string>;
   secretVariables?: Record<string, string>;
+  browserOptions?: Partial<BrowserSettings>;
   project: { id: string; organizationId: string };
 }
 
@@ -26,6 +39,11 @@ export default function SuiteSettingsPage() {
   const [description, setDescription] = useState("");
   const [variables, setVariables] = useState<KeyValueRow[]>(recordToRows());
   const [secrets, setSecrets] = useState<KeyValueRow[]>(recordToRows());
+  const [userAgentBrowser, setUserAgentBrowser] = useState<UserAgentBrowser>("chrome");
+  const [userAgentPlatform, setUserAgentPlatform] = useState<UserAgentPlatform>("linux");
+  const [headers, setHeaders] = useState<KeyValueRow[]>(recordToRows());
+  const [cookies, setCookies] = useState<CookieRow[]>(cookiesToRows());
+  const [localStorageEntries, setLocalStorageEntries] = useState<KeyValueRow[]>(recordToRows());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +54,12 @@ export default function SuiteSettingsPage() {
     setDescription(next.description ?? "");
     setVariables(recordToRows(next.variables ?? {}));
     setSecrets(recordToRows(next.secretVariables ?? {}));
+    const browser = normalizeBrowser(next.browserOptions);
+    setUserAgentBrowser(normalizeUserAgentBrowser(browser.userAgentBrowser));
+    setUserAgentPlatform(normalizeUserAgentPlatform(browser.userAgentPlatform));
+    setHeaders(recordToRows(browser.headers));
+    setCookies(cookiesToRows(browser.cookies));
+    setLocalStorageEntries(recordToRows(browser.localStorage));
   }
 
   useEffect(() => {
@@ -57,7 +81,15 @@ export default function SuiteSettingsPage() {
           name: trimmedName,
           description: description.trim() || null,
           variables: rowsToRecord(variables),
-          secretVariables: rowsToRecord(secrets)
+          secretVariables: rowsToRecord(secrets),
+          browserOptions: {
+            browser: "chromium",
+            userAgentBrowser,
+            userAgentPlatform,
+            headers: rowsToRecord(headers),
+            cookies: rowsToCookies(cookies),
+            localStorage: rowsToRecord(localStorageEntries)
+          }
         })
       });
       setSuite((current) => current ? { ...current, ...updated } : updated);
@@ -132,6 +164,19 @@ export default function SuiteSettingsPage() {
             namePlaceholder="apiToken"
             valuePlaceholder="secret value"
             secret
+          />
+
+          <BrowserOptionsEditor
+            userAgentBrowser={userAgentBrowser}
+            setUserAgentBrowser={setUserAgentBrowser}
+            userAgentPlatform={userAgentPlatform}
+            setUserAgentPlatform={setUserAgentPlatform}
+            headers={headers}
+            setHeaders={setHeaders}
+            localStorageEntries={localStorageEntries}
+            setLocalStorageEntries={setLocalStorageEntries}
+            cookies={cookies}
+            setCookies={setCookies}
           />
 
           {error ? <p className="form-error">{error}</p> : null}

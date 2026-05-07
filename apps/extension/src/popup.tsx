@@ -91,6 +91,8 @@ function Popup() {
         userAgentBrowser: "chrome",
         userAgentPlatform: "linux",
         headers: {},
+        localStorage: {},
+        cookies: [],
         actionDelayMs: 500,
         navigationSettleMs: 1200,
         finalScreenshotDelayMs: 1000,
